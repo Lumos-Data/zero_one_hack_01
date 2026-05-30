@@ -18,29 +18,31 @@ PRODUCT_SLUGS = {
     "Potassium chloride (MOP)": "mop",
 }
 
-# Data ends here; "today" is later -> stale-latest-data note (see spec section 5.2).
-LAST_DATA_MONTH = "2026-03-01"
-
-
 def load_series():
     """product -> {'YYYY-MM-DD': price_usd_per_kg (full precision)}."""
     series = {p: {} for p in PRODUCT_SLUGS}
     with open(RAW, newline="") as fh:
         for r in csv.DictReader(fh):
-            kg = float(r["price_usd_per_tonne"]) / 1000.0
-            series[r["product"]][r["date"]] = kg
+            product = r["product"]
+            if product not in series:
+                continue
+            series[product][r["date"]] = float(r["price_usd_per_tonne"]) / 1000.0
     return series
 
 
 def fill_gaps(series_for_product):
-    """Linear-interpolate every missing interior month. Returns list of filled dates."""
+    """Linear-interpolate every missing interior month on a COPY.
+
+    detect_gaps only returns interior gaps (between min and max), so
+    linear_interpolate_gap always has a neighbour on each side here.
+    Returns (new_series, filled_dates).
+    """
+    s = dict(series_for_product)
     filled = []
-    for missing in ts_utils.detect_gaps(list(series_for_product.keys())):
-        series_for_product[missing] = ts_utils.linear_interpolate_gap(
-            series_for_product, missing
-        )
+    for missing in ts_utils.detect_gaps(list(s.keys())):
+        s[missing] = ts_utils.linear_interpolate_gap(s, missing)
         filled.append(missing)
-    return filled
+    return s, filled
 
 
 def build():
@@ -50,9 +52,9 @@ def build():
     detailed = {}
 
     for product, slug in PRODUCT_SLUGS.items():
-        s = raw[product]
-        filled = fill_gaps(s)
+        s, filled = fill_gaps(raw[product])
         ordered = {d: s[d] for d in sorted(s, key=ts_utils.month_index)}
+        last_data_month = max(ordered)
 
         with open(os.path.join(OUT, f"{slug}.json"), "w") as fh:
             json.dump(ordered, fh, indent=2)
@@ -79,7 +81,7 @@ def build():
             "outlier_jump_dates": outliers,
             "flat_tail_run_length": flat_run,
             "interpolated_gap_dates": filled,
-            "last_data_month": LAST_DATA_MONTH,
+            "last_data_month": last_data_month,
         }
 
     with open(os.path.join(OUT, "dataset1_quality.csv"), "w", newline="") as fh:

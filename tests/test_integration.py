@@ -1,4 +1,5 @@
 # tests/test_integration.py
+import csv
 import json
 import os
 import subprocess
@@ -34,8 +35,14 @@ class TestDataset1Build(unittest.TestCase):
         self.assertIn("2023-11-01", series)
 
     def test_quality_csv_flags_phosphate_rock(self):
-        import csv
         with open(os.path.join(D1, "dataset1_quality.csv")) as fh:
             rows = {r["product"]: r for r in csv.DictReader(fh)}
         self.assertEqual(rows["Phosphate rock"]["data_quality"], "review")
         self.assertIn("stale_flat_tail", rows["Phosphate rock"]["flags"])
+
+    def test_stale_latest_alone_does_not_trigger_review(self):
+        with open(os.path.join(D1, "dataset1_quality.csv")) as fh:
+            rows = {r["product"]: r for r in csv.DictReader(fh)}
+        tsp = rows["Triple superphosphate (TSP)"]
+        self.assertEqual(tsp["data_quality"], "ok")
+        self.assertEqual(tsp["flags"], "stale_latest_data")
