@@ -62,5 +62,23 @@ class TestDetectGaps(unittest.TestCase):
         self.assertEqual(ts_utils.detect_gaps(dates), [])
 
 
+class TestOutlierJumps(unittest.TestCase):
+    def test_flags_large_jump_over_floor(self):
+        # flat ~1% MoM noise then a +54% spike on the last month
+        series = {}
+        val = 100.0
+        for i in range(12):
+            series[ts_utils.index_to_month(24000 + i)] = val
+            val *= 1.01
+        spike_date = ts_utils.index_to_month(24000 + 12)
+        series[spike_date] = val * 1.54
+        flagged = ts_utils.detect_outlier_jumps(series, floor_pct=40.0)
+        self.assertIn(spike_date, flagged)
+
+    def test_no_flags_for_calm_series(self):
+        series = {ts_utils.index_to_month(24000 + i): 100.0 + i for i in range(12)}
+        self.assertEqual(ts_utils.detect_outlier_jumps(series, floor_pct=40.0), [])
+
+
 if __name__ == "__main__":
     unittest.main()

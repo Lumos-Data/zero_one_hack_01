@@ -42,6 +42,26 @@ def percentile(values, p):
     return s[rank - 1]
 
 
+def detect_outlier_jumps(series, floor_pct=40.0):
+    """Flag dates whose |month-over-month %| exceeds max(floor_pct, p99 of history).
+
+    series: {'YYYY-MM-DD': float}. Returns sorted list of flagged date keys.
+    """
+    ordered = sorted(series.items(), key=lambda kv: month_index(kv[0]))
+    moms = []  # (date, abs_pct)
+    for i in range(1, len(ordered)):
+        prev_v = ordered[i - 1][1]
+        if prev_v == 0:
+            continue
+        pct = abs((ordered[i][1] / prev_v - 1.0) * 100.0)
+        moms.append((ordered[i][0], pct))
+    if not moms:
+        return []
+    p99 = percentile([m[1] for m in moms], 99)
+    threshold = max(floor_pct, p99)
+    return sorted(d for d, pct in moms if pct >= threshold)
+
+
 def detect_gaps(dates):
     """Return month-aligned 'YYYY-MM-01' strings missing between min and max."""
     if not dates:
