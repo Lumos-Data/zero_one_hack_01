@@ -42,6 +42,36 @@ def percentile(values, p):
     return s[rank - 1]
 
 
+def collapse_duplicate_towns(rows):
+    """Collapse duplicate (ISO, year, Town) rows by averaging price.
+
+    rows: list of dict (csv.DictReader rows) with str 'price_usd_per_kg_ppp'.
+    Returns (collapsed_rows, collapsed_keys) where collapsed_keys lists the
+    (ISO, year, Town) tuples that had >1 source row. Output preserves first-seen
+    order; the averaged price is written back as a string.
+    """
+    groups = {}
+    order = []
+    for r in rows:
+        key = (r["ISO"], r["year"], r["Town"])
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(r)
+
+    collapsed = []
+    collapsed_keys = []
+    for key in order:
+        members = groups[key]
+        base = dict(members[0])
+        if len(members) > 1:
+            avg = mean(float(m["price_usd_per_kg_ppp"]) for m in members)
+            base["price_usd_per_kg_ppp"] = f"{avg:.6g}"
+            collapsed_keys.append(key)
+        collapsed.append(base)
+    return collapsed, collapsed_keys
+
+
 def detect_flat_tail(series, min_run=4):
     """Length of the trailing run of identical values if >= min_run, else 0."""
     ordered = sorted(series.items(), key=lambda kv: month_index(kv[0]))

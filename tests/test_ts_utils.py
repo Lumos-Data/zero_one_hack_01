@@ -92,5 +92,23 @@ class TestFlatTail(unittest.TestCase):
         self.assertEqual(ts_utils.detect_flat_tail(series, min_run=4), 0)
 
 
+class TestCollapseDuplicateTowns(unittest.TestCase):
+    def test_averages_duplicate_town_year(self):
+        rows = [
+            {"ISO": "BFA", "year": "2017", "Town": "Yako",
+             "price_usd_per_kg_ppp": "1.00", "longitude": "1.0"},
+            {"ISO": "BFA", "year": "2017", "Town": "Yako",
+             "price_usd_per_kg_ppp": "2.00", "longitude": "1.0"},
+            {"ISO": "GHA", "year": "2017", "Town": "Tamale",
+             "price_usd_per_kg_ppp": "0.50", "longitude": "9.0"},
+        ]
+        collapsed, keys = ts_utils.collapse_duplicate_towns(rows)
+        self.assertEqual(len(collapsed), 2)
+        yako = [r for r in collapsed if r["Town"] == "Yako"][0]
+        self.assertAlmostEqual(float(yako["price_usd_per_kg_ppp"]), 1.50)
+        self.assertIn(("BFA", "2017", "Yako"), keys)
+        self.assertEqual(len(keys), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
