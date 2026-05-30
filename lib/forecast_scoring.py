@@ -37,3 +37,30 @@ def seasonal_naive_rmse(series, season=SEASON):
     if not sq:
         raise ValueError("series too short for seasonal naive")
     return _sqrt(sum(sq) / len(sq))
+
+
+def extract_scorable_points(trajectories, last_real_date):
+    """Return (points, n_windows_scored, n_windows_excluded_stale).
+
+    trajectories: {"data": [ {"forecast_end", "forecast_series": {date: {actual,
+    quantile_forecast}}} ]}. A whole window is EXCLUDED when its forecast_end is
+    later than last_real_date (its actuals run past real data -> null/garbage;
+    the documented stale-backtest gotcha). Within kept windows, months whose
+    actual is None are skipped defensively.
+    points: list of (actual_float, quantile_dict).
+    """
+    cutoff = month_index(last_real_date)
+    points = []
+    n_scored = 0
+    n_excluded = 0
+    for window in trajectories["data"]:
+        if month_index(window["forecast_end"]) > cutoff:
+            n_excluded += 1
+            continue
+        n_scored += 1
+        for _date, entry in window["forecast_series"].items():
+            actual = entry.get("actual")
+            if actual is None:
+                continue
+            points.append((float(actual), entry["quantile_forecast"]))
+    return points, n_scored, n_excluded
