@@ -145,3 +145,35 @@ def forecast_block(forecast_json):
         q = entry["quantile_forecast"]
         out[date] = {"p" + k[2:]: float(v) for k, v in q.items()}
     return out
+
+
+FERTILIZERS = ["urea", "dap", "mop", "tsp", "phosphate-rock"]
+VARIANTS = ["ON", "MID", "OFF"]
+RECENCY = {"ON": 0.0, "MID": 0.3}  # OFF omits recency_factor (API default 0.5)
+
+
+def build_cell_payload(slug, series, variant):
+    """Assemble a submit_forecast payload dict for one bake-off cell.
+
+    variant in VARIANTS. ON/MID set recency_factor; OFF omits it.
+    """
+    title = (f"World Bank {slug} fertilizer FOB benchmark spot price, "
+             "monthly USD per kg")
+    payload = {
+        "pipeline_version": "v1",
+        "frequency": "monthly",
+        "soft_horizon": 12,
+        "backtest": True,
+        "timeseries": series,
+        "timeseries_metadata": {
+            "title": title[:511],
+            "description": (
+                f"Monthly {slug} fertilizer benchmark spot price in USD/kg, "
+                "World Bank Pink Sheet, 1996-2026. Bake-off variant "
+                f"{variant} for a procurement-timing forecast."
+            )[:2048],
+        },
+    }
+    if variant in RECENCY:
+        payload["recency_factor"] = RECENCY[variant]
+    return payload

@@ -1,0 +1,105 @@
+{
+  "config": {
+    "soft_horizon": 12,
+    "backtest": true,
+    "accept_stale_latest_data": true,
+    "recency_factor": {
+      "ON": 0.0,
+      "MID": 0.3,
+      "OFF": null
+    }
+  },
+  "last_real_date": "2026-03-01",
+  "reference_jobs": {
+    "mop_drivers_D3_backtest_false": "1517c8d1-3ddf-479c-aaf5-e062fba00fa6",
+    "wti_D4_reference": "b6127f17-e68e-4efe-ad7a-86fa292d9027",
+    "urea_runA_sh6": "59b5874f-a40f-465c-b903-b33c5a17dcb1"
+  },
+  "cells": {
+    "urea": {
+      "ON": {
+        "job_id": null,
+        "status": "pending",
+        "eur_cost": null
+      },
+      "MID": {
+        "job_id": null,
+        "status": "pending",
+        "eur_cost": null
+      },
+      "OFF": {
+        "job_id": null,
+        "status": "pending",
+        "eur_cost": null
+      }
+    },
+    "dap": {
+      "ON": {
+        "job_id": null,
+        "status": "pending",
+        "eur_cost": null
+      },
+      "MID": {
+        "job_id": null,
+        "status": "pending",
+        "eur_cost": null
+      },
+      "OFF": {
+        "job_id": null,
+        "status": "pending",
+        "eur_cost": null
+      }
+    },
+    "mop": {
+      "ON": {
+        "job_id": null,
+        "status": "pending",
+        "eur_cost": null
+      },
+      "MID": {
+        "job_id": null,
+        "status": "pending",
+        "eur_cost": null
+      },
+      "OFF": {
+        "job_id": null,
+        "status": "pending",
+        "eur_cost": null
+      }
+    },
+    "tsp": {
+      "ON": {
+        "job_id": null,
+        "status": "pending",
+        "eur_cost": null
+      },
+      "MID": {
+        "job_id": null,
+        "status": "pending",
+        "eur_cost": null
+      },
+      "OFF": {
+        "job_id": null,
+        "status": "pending",
+        "eur_cost": null
+      }
+    },
+    "phosphate-rock": {
+      "ON": {
+        "job_id": null,
+        "status": "pending",
+        "eur_cost": null
+      },
+      "MID": {
+        "job_id": null,
+        "status": "pending",
+        "eur_cost": null
+      },
+      "OFF": {
+        "job_id": null,
+        "status": "pending",
+        "eur_cost": null
+      }
+    }
+  }
+}

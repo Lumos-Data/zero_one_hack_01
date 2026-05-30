@@ -178,3 +178,25 @@ class TestForecastBlock(unittest.TestCase):
         self.assertAlmostEqual(row["p50"], 0.5)
         self.assertAlmostEqual(row["p05"], 0.4)
         self.assertAlmostEqual(row["p95"], 0.6)
+
+
+class TestBuildPayload(unittest.TestCase):
+    def _series(self):
+        return {tu.index_to_month(24000 + i): float(i + 1) for i in range(130)}
+
+    def test_on_variant_sets_recency_zero(self):
+        p = fs.build_cell_payload("urea", self._series(), "ON")
+        self.assertEqual(p["recency_factor"], 0.0)
+        self.assertEqual(p["soft_horizon"], 12)
+        self.assertTrue(p["backtest"])
+        self.assertEqual(p["frequency"], "monthly")
+        self.assertEqual(p["pipeline_version"], "v1")
+        self.assertGreaterEqual(len(p["timeseries_metadata"]["title"]), 20)
+
+    def test_mid_variant_sets_recency_point_three(self):
+        p = fs.build_cell_payload("dap", self._series(), "MID")
+        self.assertEqual(p["recency_factor"], 0.3)
+
+    def test_off_variant_omits_recency(self):
+        p = fs.build_cell_payload("mop", self._series(), "OFF")
+        self.assertNotIn("recency_factor", p)
