@@ -40,3 +40,20 @@ def percentile(values, p):
         rank += 1
     rank = max(1, min(rank, len(s)))
     return s[rank - 1]
+
+
+def linear_interpolate_gap(series, missing_date):
+    """Linear value at missing_date from nearest present neighbours on each side.
+
+    series: {'YYYY-MM-DD': float}. missing_date must lie strictly between an
+    earlier and a later present key.
+    """
+    target = month_index(missing_date)
+    before = [(month_index(d), v) for d, v in series.items() if month_index(d) < target]
+    after = [(month_index(d), v) for d, v in series.items() if month_index(d) > target]
+    if not before or not after:
+        raise ValueError(f"cannot interpolate {missing_date}: missing a side neighbour")
+    pi, pv = max(before)
+    ni, nv = min(after)
+    frac = (target - pi) / (ni - pi)
+    return pv + (nv - pv) * frac

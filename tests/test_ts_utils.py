@@ -37,5 +37,20 @@ class TestStats(unittest.TestCase):
             ts_utils.percentile([], 99)
 
 
+class TestInterpolate(unittest.TestCase):
+    def test_midpoint_for_single_interior_gap(self):
+        series = {"2023-10-01": 100.0, "2023-12-01": 200.0}
+        self.assertAlmostEqual(
+            ts_utils.linear_interpolate_gap(series, "2023-11-01"), 150.0
+        )
+
+    def test_weighted_for_wider_gap(self):
+        # gap one month after prev (Feb) of a Jan..Apr span
+        series = {"2024-01-01": 0.0, "2024-04-01": 30.0}
+        self.assertAlmostEqual(
+            ts_utils.linear_interpolate_gap(series, "2024-02-01"), 10.0
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
