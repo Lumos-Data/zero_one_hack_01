@@ -80,5 +80,17 @@ class TestOutlierJumps(unittest.TestCase):
         self.assertEqual(ts_utils.detect_outlier_jumps(series, floor_pct=40.0), [])
 
 
+class TestFlatTail(unittest.TestCase):
+    def test_flags_run_of_four_or_more(self):
+        series = {ts_utils.index_to_month(24000 + i): v
+                  for i, v in enumerate([1.0, 2.0, 3.0, 5.0, 5.0, 5.0, 5.0])}
+        self.assertEqual(ts_utils.detect_flat_tail(series, min_run=4), 4)
+
+    def test_no_flag_for_short_plateau(self):
+        series = {ts_utils.index_to_month(24000 + i): v
+                  for i, v in enumerate([1.0, 2.0, 5.0, 5.0])}
+        self.assertEqual(ts_utils.detect_flat_tail(series, min_run=4), 0)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -42,6 +42,21 @@ def percentile(values, p):
     return s[rank - 1]
 
 
+def detect_flat_tail(series, min_run=4):
+    """Length of the trailing run of identical values if >= min_run, else 0."""
+    ordered = sorted(series.items(), key=lambda kv: month_index(kv[0]))
+    if not ordered:
+        return 0
+    last = ordered[-1][1]
+    run = 0
+    for _date, v in reversed(ordered):
+        if v == last:
+            run += 1
+        else:
+            break
+    return run if run >= min_run else 0
+
+
 def detect_outlier_jumps(series, floor_pct=40.0):
     """Flag dates whose |month-over-month %| exceeds max(floor_pct, p99 of history).
 
