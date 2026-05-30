@@ -137,13 +137,19 @@ def forecast_block(forecast_json):
     """From forecast.json -> {date: {"p05":.., "p10":.., ..., "p95":..}}.
 
     Maps each quantile key "0.05".."0.95" to "p05".."p95" (includes "p50").
-    Note: the mean "forecast" key is intentionally excluded; champions.json uses the P50 quantile.
+    If an entry has no quantile_forecast (point-only forward forecast), emits
+    just {"p50": float(entry["forecast"])} — no band keys.
+    Note: the mean "forecast" key is intentionally excluded when full quantiles
+    are present; champions.json uses the P50 quantile.
     """
     series = forecast_json["data"]["forecast_series"]
     out = {}
     for date, entry in series.items():
-        q = entry["quantile_forecast"]
-        out[date] = {"p" + k[2:]: float(v) for k, v in q.items()}
+        if "quantile_forecast" in entry:
+            q = entry["quantile_forecast"]
+            out[date] = {"p" + k[2:]: float(v) for k, v in q.items()}
+        else:
+            out[date] = {"p50": float(entry["forecast"])}
     return out
 
 

@@ -184,6 +184,26 @@ class TestForecastBlock(unittest.TestCase):
         self.assertAlmostEqual(row["p95"], 0.6)
 
 
+    def test_forecast_block_point_only_entry(self):
+        """Mixed forecast_series: one month with full quantiles, one with only 'forecast'."""
+        forecast_json = {"data": {"forecast_series": {
+            "2026-06-01": {"forecast": 0.5, "quantile_forecast": {
+                "0.05": 0.4, "0.10": 0.42, "0.50": 0.5, "0.90": 0.58, "0.95": 0.6}},
+            "2026-07-01": {"forecast": 0.42},
+        }}}
+        block = fs.forecast_block(forecast_json)
+        # Quantile month: has p05, p50, p95
+        row_full = block["2026-06-01"]
+        self.assertAlmostEqual(row_full["p05"], 0.4)
+        self.assertAlmostEqual(row_full["p50"], 0.5)
+        self.assertAlmostEqual(row_full["p95"], 0.6)
+        # Point-only month: only p50, no p05/p95
+        row_point = block["2026-07-01"]
+        self.assertAlmostEqual(row_point["p50"], 0.42)
+        self.assertNotIn("p05", row_point)
+        self.assertNotIn("p95", row_point)
+
+
 class TestBuildPayload(unittest.TestCase):
     def _series(self):
         return {tu.index_to_month(24000 + i): float(i + 1) for i in range(130)}
@@ -257,6 +277,8 @@ class TestScoreBakeoffIntegration(unittest.TestCase):
         self.assertTrue(champions["urea"]["beats_naive"])  # OFF mase < 1
         self.assertIn("2026-06-01", champions["urea"]["forecast"])
         self.assertIn("urea", md)
+        # Full-quantile forecast.json -> forward_bands_available must be True
+        self.assertTrue(champions["urea"]["forward_bands_available"])
 
     def test_all_variants_unscoreable_emits_sentinel(self):
         import score_bakeoff
