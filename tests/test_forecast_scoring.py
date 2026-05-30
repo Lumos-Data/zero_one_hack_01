@@ -200,3 +200,58 @@ class TestBuildPayload(unittest.TestCase):
     def test_off_variant_omits_recency(self):
         p = fs.build_cell_payload("mop", self._series(), "OFF")
         self.assertNotIn("recency_factor", p)
+
+
+import json
+import os
+import tempfile
+
+
+class TestScoreBakeoffIntegration(unittest.TestCase):
+    def test_assemble_picks_lower_mase_winner(self):
+        import score_bakeoff
+        series = {tu.index_to_month(24240 + i): float(i) for i in range(24)}
+        last_real = tu.index_to_month(24240 + 23)
+
+        def traj(p50_a, p50_b):
+            return {"data": [{"forecast_end": tu.index_to_month(24240 + 10),
+                "forecast_series": {
+                    tu.index_to_month(24240 + 9): {"actual": 10.0,
+                        "quantile_forecast": {"0.05": 4.0, "0.10": 5.0,
+                            "0.50": p50_a, "0.90": 9.0, "0.95": 9.5}},
+                    tu.index_to_month(24240 + 10): {"actual": 20.0,
+                        "quantile_forecast": {"0.05": 12.0, "0.10": 14.0,
+                            "0.50": p50_b, "0.90": 22.0, "0.95": 25.0}},
+                }}]}
+
+        fcast = {"data": {"forecast_series": {"2026-06-01": {"forecast": 0.5,
+            "quantile_forecast": {"0.05": 0.4, "0.10": 0.42, "0.50": 0.5,
+                                  "0.90": 0.58, "0.95": 0.6}}}}}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            proc = os.path.join(tmp, "processed")
+            bake = os.path.join(tmp, "bakeoff")
+            os.makedirs(proc)
+            with open(os.path.join(proc, "urea.json"), "w") as fh:
+                json.dump(series, fh)
+            # OFF is near-perfect (p50 ~ actual); ON is far -> OFF must win
+            variants = {"ON": traj(2.0, 2.0), "MID": traj(6.0, 12.0),
+                        "OFF": traj(10.0, 20.0)}
+            for v, t in variants.items():
+                d = os.path.join(bake, "urea", v)
+                os.makedirs(d)
+                json.dump(t, open(os.path.join(d, "backtest_trajectories.json"), "w"))
+                json.dump(fcast, open(os.path.join(d, "forecast.json"), "w"))
+            manifest = {"last_real_date": last_real, "cells": {"urea": {
+                "ON": {"job_id": "a", "status": "completed"},
+                "MID": {"job_id": "b", "status": "completed"},
+                "OFF": {"job_id": "c", "status": "completed"}}}}
+            json.dump(manifest, open(os.path.join(bake, "manifest.json"), "w"))
+
+            champions, md = score_bakeoff.assemble(
+                manifest, proc, bake, fertilizers=["urea"])
+
+        self.assertEqual(champions["urea"]["winner_variant"], "OFF")
+        self.assertTrue(champions["urea"]["beats_naive"])  # OFF mase < 1
+        self.assertIn("2026-06-01", champions["urea"]["forecast"])
+        self.assertIn("urea", md)
