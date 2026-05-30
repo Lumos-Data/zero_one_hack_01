@@ -78,3 +78,45 @@ class TestPointMetrics(unittest.TestCase):
     def test_empty_raises(self):
         with self.assertRaises(ValueError):
             fs.mae_points([])
+
+
+class TestScoreAndRank(unittest.TestCase):
+    def test_score_cell(self):
+        # series rises by 1/month for 24 months -> y_t - y_{t-12} == 12 always
+        series = {tu.index_to_month(24240 + i): float(i) for i in range(24)}
+        last_real = tu.index_to_month(24240 + 23)
+        traj = {"data": [
+            {"forecast_end": tu.index_to_month(24240 + 10), "forecast_series": {
+                tu.index_to_month(24240 + 9): {
+                    "actual": 10.0,
+                    "quantile_forecast": {"0.05": 4.0, "0.10": 5.0, "0.50": 8.0,
+                                          "0.90": 9.0, "0.95": 9.5}},
+                tu.index_to_month(24240 + 10): {
+                    "actual": 20.0,
+                    "quantile_forecast": {"0.05": 12.0, "0.10": 14.0, "0.50": 16.0,
+                                          "0.90": 22.0, "0.95": 25.0}},
+            }},
+        ]}
+        m = fs.score_cell(series, traj, last_real)
+        self.assertAlmostEqual(m["mase"], 3.0 / 12.0)        # mae 3 / naive 12
+        self.assertAlmostEqual(m["rmsse"], (10.0 ** 0.5) / 12.0)
+        self.assertAlmostEqual(m["mape"], 20.0)
+        self.assertEqual(m["n_points"], 2)
+        self.assertEqual(m["n_windows_scored"], 1)
+        self.assertEqual(m["n_windows_excluded_stale"], 0)
+
+    def test_rank_by_mase_then_mape(self):
+        cells = {
+            "ON": {"mase": 0.5, "mape": 10.0},
+            "MID": {"mase": 0.3, "mape": 12.0},
+            "OFF": {"mase": 0.3, "mape": 8.0},
+        }
+        winner, ordered = fs.rank_variants(cells)
+        self.assertEqual(winner, "OFF")          # tie on mase -> lower mape wins
+        self.assertEqual(ordered, ["OFF", "MID", "ON"])
+
+    def test_rank_puts_none_last(self):
+        cells = {"ON": {"mase": 0.5, "mape": 10.0}, "BAD": None}
+        winner, ordered = fs.rank_variants(cells)
+        self.assertEqual(winner, "ON")
+        self.assertEqual(ordered[-1], "BAD")

@@ -94,3 +94,34 @@ def band_coverage(points, lo_key, hi_key):
         raise ValueError("no scorable points")
     covered = sum(1 for a, q in points if float(q[lo_key]) <= a <= float(q[hi_key]))
     return covered / len(points)
+
+
+def score_cell(series, trajectories, last_real_date):
+    """Full metric bundle for one cell. Returns a dict of metrics."""
+    points, n_scored, n_excluded = extract_scorable_points(trajectories, last_real_date)
+    naive_mae = seasonal_naive_mae(series)
+    naive_rmse = seasonal_naive_rmse(series)
+    return {
+        "mase": mae_points(points) / naive_mae,
+        "rmsse": rmse_points(points) / naive_rmse,
+        "mape": mape_points(points),
+        "cov80": band_coverage(points, *BAND_80),
+        "cov90": band_coverage(points, *BAND_90),
+        "n_points": len(points),
+        "n_windows_scored": n_scored,
+        "n_windows_excluded_stale": n_excluded,
+    }
+
+
+def rank_variants(cells):
+    """cells: {variant: metrics_dict | None}. Returns (winner_variant, ordered_list).
+
+    Ranked by MASE ascending, tiebreak MAPE ascending. None-metric cells sort last.
+    """
+    def key(item):
+        _v, m = item
+        if m is None:
+            return (float("inf"), float("inf"))
+        return (m["mase"], m["mape"])
+    ordered = sorted(cells.items(), key=key)
+    return ordered[0][0], [v for v, _m in ordered]
