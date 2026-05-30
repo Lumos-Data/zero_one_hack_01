@@ -62,13 +62,16 @@ def build():
                             "source": r["source"], "price": price})
 
     cy_rows = []
+    cy_median_float = {}
     for (iso, country, year), prices in sorted(by_cy.items()):
         low = low_by_cy[(iso, country, year)]
+        median_float = round(ts_utils.median(prices), 4)
+        cy_median_float[(iso, country, year)] = median_float
         cy_rows.append({
             "ISO": iso,
             "country": country,
             "year": year,
-            "median_price_usd_per_kg_ppp": f"{ts_utils.median(prices):.4f}",
+            "median_price_usd_per_kg_ppp": f"{median_float:.4f}",
             "mean_price": f"{ts_utils.mean(prices):.4f}",
             "obs_count": len(prices),
             "n_afr_obs": afr_by_cy[(iso, country, year)],
@@ -94,8 +97,8 @@ def build():
     for iso, rows in sorted(by_country.items()):
         years = sorted(int(r["year"]) for r in rows)
         latest = max(years)
-        latest_row = [r for r in rows if int(r["year"]) == latest][0]
-        all_year_medians = [float(r["median_price_usd_per_kg_ppp"]) for r in rows]
+        latest_row = next(r for r in rows if int(r["year"]) == latest)
+        all_year_medians = [cy_median_float[(r["ISO"], r["country"], r["year"])] for r in rows]
         summary_rows.append({
             "ISO": iso,
             "country": rows[0]["country"],

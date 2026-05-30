@@ -95,3 +95,26 @@ class TestDataset2Build(unittest.TestCase):
         self.assertEqual(len(rows), 18)
         niger = [r for r in rows if r["country"] == "Niger"][0]
         self.assertEqual(niger["data_quality"], "review")  # latest year 2013 < 2016
+
+    def test_low_price_flag_triggers_review(self):
+        # A country-year with flagged low-price observations must be data_quality=review.
+        rows = self._rows("urea_country_year.csv")
+        flagged = [r for r in rows if int(r["flagged_low_price_obs_count"]) > 0]
+        self.assertTrue(flagged, "expected at least one country-year with low-price flags")
+        for r in flagged:
+            self.assertEqual(r["data_quality"], "review")
+
+    def test_small_obs_count_triggers_review(self):
+        rows = self._rows("urea_country_year.csv")
+        for r in rows:
+            if int(r["obs_count"]) < 3:
+                self.assertEqual(r["data_quality"], "review")
+
+    def test_sidecar_records_collapsed_named_town_keys(self):
+        import json as _json
+        with open(os.path.join(D2, "data_quality_flags.json")) as fh:
+            side = _json.load(fh)
+        # 35 genuine named-town duplicate groups were collapsed (spec section 6.0/6.1).
+        self.assertEqual(len(side["collapsed_duplicate_named_town_keys"]), 35)
+        self.assertEqual(side["low_price_floor"], 0.10)
+        self.assertIn("low_price_observations", side)
